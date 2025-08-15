@@ -1,0 +1,8 @@
+body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; }
+.container { max-width: 720px; margin: 48px auto; padding: 0 16px; }
+h1 { font-size: 22px; margin-bottom: 16px; }
+form { display: flex; gap: 12px; align-items: center; }
+#status { margin-top: 16px; white-space: pre-line; }
+.bar { width: 100%; height: 10px; background: #eee; border-radius: 6px; overflow: hidden; margin-top: 8px; }
+.bar > div { height: 100%; width: 0%; background: #4caf50; }
+#dl { margin-top: 12px; display: none; }

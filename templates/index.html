@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>火山TTS合成（并发+进度）</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>TXT → 火山TTS（并发+重试+进度）</h1>
+    <form id="uploadForm">
+      <input type="file" name="file" accept=".txt" required />
+      <button type="submit">上传并开始</button>
+    </form>
+
+    <div id="status">尚未开始</div>
+    <div class="bar"><div id="bar"></div></div>
+    <a id="dl" href="#" download>下载合成音频</a>
+  </main>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const statusEl = document.getElementById('status');
+    const bar = document.getElementById('bar');
+    const dl = document.getElementById('dl');
+
+    async function poll(job_id) {
+      const t = setInterval(async () => {
+        try {
+          const r = await fetch(`/status/${job_id}`);
+          if (!r.ok) return;
+          const s = await r.json();
+          const total = s.total || 0, done = s.done || 0, failed = s.failed || 0;
+          const pct = total > 0 ? Math.round((done + failed) / total * 100) : 0;
+          statusEl.textContent = `状态：${s.state || 'N/A'}  |  ${s.message || ''}\n进度：${done}/${total}（失败 ${failed}）`;
+          bar.style.width = pct + '%';
+
+          if (s.state === 'done') {
+            clearInterval(t);
+            dl.href = `/result/${job_id}`;
+            dl.style.display = 'inline-block';
+            dl.textContent = '下载合成音频';
+          } else if (s.state === 'error') {
+            clearInterval(t);
+            statusEl.textContent += '\n任务失败';
+          }
+        } catch (e) {}
+      }, 1200);
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      dl.style.display = 'none';
+      dl.removeAttribute('href');
+      bar.style.width = '0%';
+      statusEl.textContent = '正在上传...';
+
+      const fd = new FormData(form);
+      try {
+        const r = await fetch('/tts', { method: 'POST', body: fd });
+        if (!r.ok) {
+          const err = await r.json().catch(()=>({detail:'提交失败'}));
+          throw new Error(err.detail || '提交失败');
+        }
+        const data = await r.json();
+        statusEl.textContent = '任务已创建，开始处理...';
+        poll(data.job_id);
+      } catch (err) {
+        statusEl.textContent = '出错：' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
