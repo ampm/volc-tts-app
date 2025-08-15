@@ -25,28 +25,52 @@
     const bar = document.getElementById('bar');
     const dl = document.getElementById('dl');
 
+
     async function poll(job_id) {
-      const t = setInterval(async () => {
+      let delay = 1000;          // 起始 1s
+      const maxDelay = 5000;     // 上限 5s
+      let timer = null;
+
+      const step = async () => {
         try {
           const r = await fetch(`/status/${job_id}`);
           if (!r.ok) return;
           const s = await r.json();
           const total = s.total || 0, done = s.done || 0, failed = s.failed || 0;
           const pct = total > 0 ? Math.round((done + failed) / total * 100) : 0;
+
           statusEl.textContent = `状态：${s.state || 'N/A'}  |  ${s.message || ''}\n进度：${done}/${total}（失败 ${failed}）`;
           bar.style.width = pct + '%';
 
+          // 有失败详情就展示一点（可选）
+          if (Array.isArray(s.failures) && s.failures.length) {
+            const lines = s.failures.slice(0, 3).map(f => `片段#${f.idx}: ${f.error}`);
+            statusEl.textContent += "\n失败示例：\n" + lines.join("\n");
+          }
+
           if (s.state === 'done') {
-            clearInterval(t);
             dl.href = `/result/${job_id}`;
             dl.style.display = 'inline-block';
             dl.textContent = '下载合成音频';
-          } else if (s.state === 'error') {
-            clearInterval(t);
-            statusEl.textContent += '\n任务失败';
+            return; // 停止轮询
           }
-        } catch (e) {}
-      }, 1200);
+          if (s.state === 'error') {
+            statusEl.textContent += '\n任务失败';
+            return; // 停止轮询
+          }
+
+          // 任务未结束：指数退避（最多 5s）
+          delay = Math.min(delay * 1.5, maxDelay);
+        } catch (e) {
+          // 网络瞬断等，轻微退避
+          delay = Math.min(delay * 1.5, maxDelay);
+        } finally {
+          timer = setTimeout(step, delay);
+        }
+      };
+
+      // start
+      step();
     }
 
     form.addEventListener('submit', async (e) => {

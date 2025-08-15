@@ -1,0 +1,11 @@
+# env
+.env
+.env.*
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+# 生成产物
+chunks/
+outputs/

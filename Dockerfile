@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
@@ -10,6 +10,8 @@ COPY . .
 ENV PYTHONUNBUFFERED=1
 
 # ENV VOLC_TTS_TOKEN=xxx
+# ENV VOLC_APP_ID=xxx
+# ENV VOLC_CLUSTER=volcano_tts
 # ENV OPENAI_API_KEY=xxx
 # ENV VOICE_TYPE=BV001_streaming
 # ENV MAX_LEN=300
